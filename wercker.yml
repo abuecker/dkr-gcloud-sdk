@@ -1,0 +1,38 @@
+box:
+  id: alpine:3.5
+  cmd: /bin/sh
+
+ignore-file: .werckerignore
+
+build:
+  steps:
+    - script:
+        name: Build
+        code: echo "It's all good!"
+
+deploy:
+  steps:
+    - script:
+        name: Setup the container
+        code: >
+          apk --update --no-cache add python curl &&
+
+          curl https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-167.0.0-linux-x86_64.tar.gz \
+            -o /tmp/google-cloud-sdk.tgz &&
+          mkdir /opt && cd /opt && tar xf /tmp/google-cloud-sdk.tgz &&
+
+          cd /opt/google-cloud-sdk/ && ./install.sh --quiet \
+            --usage-reporting false \
+            --additional-components docker-credential-gcr kubectl &&
+
+          rm -rf /tmp/*
+
+
+    - internal/docker-push:
+        username: $DOCKER_USERNAME
+        password: $DOCKER_PASSWORD
+        tag: latest, $WERCKER_GIT_COMMIT
+        repository: abuecker/gcloud-sdk
+        registry: https://registry.hub.docker.com
+        env: PATH=/opt/google-cloud-sdk/bin:$PATH
+

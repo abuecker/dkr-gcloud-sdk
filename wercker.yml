@@ -8,31 +8,43 @@ build:
   steps:
     - script:
         name: Build
-        code: echo "It's all good!"
+        code: >
+          apk --update --no-cache add python curl && \
+          mkdir /opt && cd /opt && \
+          curl https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-175.0.0-linux-x86_64.tar.gz | tar xz && \
+          cd /opt/google-cloud-sdk/ && ./install.sh --quiet \
+            --usage-reporting false \
+            --additional-components \
+                docker-credential-gcr \
+                kubectl \
+                beta && \
+
+          rm -rf /tmp/*
 
 deploy:
   steps:
     - script:
         name: Setup the container
         code: >
-          apk --update --no-cache add python curl &&
+          apk --update --no-cache add python curl && \
 
-          curl https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-167.0.0-linux-x86_64.tar.gz \
-            -o /tmp/google-cloud-sdk.tgz &&
-          mkdir /opt && cd /opt && tar xf /tmp/google-cloud-sdk.tgz &&
+          mkdir /opt && cd /opt && \
+          curl https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-175.0.0-linux-x86_64.tar.gz | tar xz && \
 
           cd /opt/google-cloud-sdk/ && ./install.sh --quiet \
             --usage-reporting false \
-            --additional-components docker-credential-gcr kubectl &&
+            --additional-components \
+                docker-credential-gcr \
+                kubectl \
+                beta && \
 
           rm -rf /tmp/*
-
 
     - internal/docker-push:
         username: $DOCKER_USERNAME
         password: $DOCKER_PASSWORD
-        tag: latest, $WERCKER_GIT_COMMIT
+        tag: latest,$WERCKER_GIT_COMMIT,175.0.0
         repository: abuecker/gcloud-sdk
         registry: https://registry.hub.docker.com
-        env: PATH=/opt/google-cloud-sdk/bin:$PATH
+        env: PATH=/opt/google-cloud-sdk/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
